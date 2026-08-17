@@ -471,8 +471,23 @@ caption { text-align: left; padding: .6rem .7rem; color: var(--ink-3); font-size
   display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
 }
 
-.theme-icon::before { content: "🌙"; }
-:root[data-theme="dark"] .theme-icon::before { content: "☀"; }
+/* ----------------------------------------------------------------- icons */
+.icon {
+  width: 1.05em; height: 1.05em; flex: none; display: block;
+  vertical-align: -.15em;
+}
+.brand-mark .icon { width: 20px; height: 20px; }
+.dropzone-icon .icon { width: 40px; height: 40px; margin: 0 auto; color: var(--brand-2); }
+.filelist .icon { width: 18px; height: 18px; color: var(--ink-3); }
+.checklist .mark .icon { width: 13px; height: 13px; }
+.step-dot .icon { width: 12px; height: 12px; }
+.btn .icon, button .icon { width: 1em; height: 1em; }
+
+/* Show the moon in light mode, the sun in dark, in all three theme states. */
+.icon-when-dark { display: none; }
+:root[data-theme="dark"] .icon-when-dark { display: block; }
+:root[data-theme="dark"] .icon-when-light { display: none; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .theme-icon::before { content: "☀"; }
+  :root:not([data-theme="light"]) .icon-when-dark { display: block; }
+  :root:not([data-theme="light"]) .icon-when-light { display: none; }
 }

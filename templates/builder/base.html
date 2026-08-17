@@ -5,14 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Amazon UK Acquisition P&amp;L{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="16x16 32x32 48x48 64x64">
+  <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+  <link rel="apple-touch-icon" href="{% static 'icon-192.png' %}">
 </head>
 <body>
+{% include "builder/_icons.svg" %}
 <a class="skip" href="#main">Skip to content</a>
 
 <header class="topbar">
   <a class="brand" href="{% url 'builder:upload' %}">
-    <span class="brand-mark" aria-hidden="true">£</span>
+    <span class="brand-mark" aria-hidden="true">
+      <svg class="icon" viewBox="0 0 24 24"><use href="#icon-chart"/></svg>
+    </span>
     <span>
       <strong>Acquisition P&amp;L</strong>
       <small>Amazon UK · 13-month reconciled model</small>
@@ -20,7 +25,11 @@
   </a>
   <div class="topbar-actions">
     <button type="button" class="ghost" id="theme-toggle" aria-label="Toggle dark mode">
-      <span class="theme-icon" aria-hidden="true"></span><span class="theme-label">Dark</span>
+      <svg class="icon icon-when-light" aria-hidden="true" viewBox="0 0 24 24">
+        <use href="#icon-moon"/></svg>
+      <svg class="icon icon-when-dark" aria-hidden="true" viewBox="0 0 24 24">
+        <use href="#icon-sun"/></svg>
+      <span class="theme-label">Dark</span>
     </button>
     {% if job %}
       <form method="post" action="{% url 'builder:discard' job.id %}"
