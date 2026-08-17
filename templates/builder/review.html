@@ -1,0 +1,165 @@
+{% extends "builder/base.html" %}
+{% block title %}Review sources — Acquisition P&amp;L{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div class="eyebrow">Step 2 of 5</div>
+  <h1>Review what was found</h1>
+  <p>Confirm the months to model and check the Business Report mapping. Amazon names
+     those files by download date only, so the month is inferred by matching each
+     report's unit count against the transaction data.</p>
+</div>
+
+<div class="grid grid-4">
+  <div class="stat">
+    <div class="stat-label">Summary PDFs</div>
+    <div class="stat-value">{{ counts.summary }}</div>
+    <div class="stat-note">The authoritative source</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Transaction CSVs</div>
+    <div class="stat-value">{{ counts.transaction }}</div>
+    <div class="stat-note">Units &amp; fee ties</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Business Reports</div>
+    <div class="stat-value">{{ counts.business }}</div>
+    <div class="stat-note">Traffic &amp; conversion</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">PPC invoices</div>
+    <div class="stat-value">{{ invoice_count }}</div>
+    <div class="stat-note">{{ parse.invoice_duplicates }} duplicates removed</div>
+  </div>
+</div>
+
+{% if errors %}
+<div class="callout callout-bad" style="margin-top:1.2rem">
+  <strong>{{ errors|length }} file(s) could not be read</strong>
+  <ul style="margin:.4rem 0 0;padding-left:1.1rem">
+    {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<form method="post" style="margin-top:1.4rem">
+  {% csrf_token %}
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Months to model</h2>
+        <p class="card-sub">All 13 are selected. TTM is the newest 12 — the oldest month
+           is kept for the year-on-year comparison but excluded from the totals.</p>
+      </div>
+      <div class="chips">
+        <span class="chip"><span class="dot dot-ok"></span> reconciles</span>
+        <span class="chip"><span class="dot dot-bad"></span> off</span>
+        <span class="chip"><span class="dot dot-off"></span> no transactions</span>
+      </div>
+    </div>
+
+    <div class="month-grid">
+      {% for month in months %}
+      <label class="month-toggle">
+        <input type="checkbox" name="window" value="{{ month.key }}"
+               {% if month.selected %}checked{% endif %}>
+        <span>
+          <strong>{{ month.label }}</strong>
+          <span class="m-meta">£{{ month.income_total|floatformat:0 }}</span>
+          <span class="m-meta">{{ month.units }} units</span>
+          <span class="m-flags">
+            <span class="dot {% if month.income_ok %}dot-ok{% else %}dot-bad{% endif %}"
+                  title="Income check"></span>
+            <span class="dot {% if month.expenses_ok %}dot-ok{% else %}dot-bad{% endif %}"
+                  title="Expenses check"></span>
+            <span class="dot {% if month.has_transactions %}dot-ok{% else %}dot-off{% endif %}"
+                  title="Transaction CSV"></span>
+          </span>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if reports %}
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2>Business Report → month</h2>
+        <p class="card-sub">Auto-matched on units ordered. Change any row that looks wrong;
+           each month can take only one report.</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>File</th><th class="num">Units ordered</th><th class="num">Sessions</th>
+            <th class="num">Conversion</th><th class="num">Buy Box</th><th>Month</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in reports %}
+          <tr>
+            <td class="mono">{{ report.name }}</td>
+            <td class="num">{{ report.units_ordered }}</td>
+            <td class="num">{{ report.sessions }}</td>
+            <td class="num">{{ report.conversion|floatformat:3 }}</td>
+            <td class="num">{{ report.buy_box|floatformat:3 }}</td>
+            <td>
+              <select name="report__{{ report.source }}">
+                <option value="">— not used —</option>
+                {% for option in month_options %}
+                  <option value="{{ option.key }}"
+                    {% if option.key == report.selected %}selected{% endif %}>
+                    {{ option.label }}</option>
+                {% endfor %}
+              </select>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="callout callout-warn">
+    <strong>No Business Reports found</strong>
+    The Traffic &amp; Conversion tab will be empty. Everything else still builds.
+  </div>
+  {% endif %}
+
+  {% if unmatched %}
+  <details class="card">
+    <summary style="cursor:pointer;font-weight:650">
+      {{ unmatched|length }} uploaded file(s) were not used
+    </summary>
+    <div class="table-wrap" style="margin-top:.8rem">
+      <table>
+        <thead><tr><th>File</th><th>Why</th></tr></thead>
+        <tbody>
+          {% for item in unmatched %}
+          <tr><td class="mono">{{ item.name }}</td><td class="muted">{{ item.note }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+  {% endif %}
+
+  {% if warnings %}
+  <div class="callout callout-warn">
+    <strong>Notes from reading the files</strong>
+    <ul style="margin:.4rem 0 0;padding-left:1.1rem">
+      {% for warning in warnings %}<li>{{ warning }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div class="sticky-actions">
+    <p class="hint">Next: the landed cost per product — the one figure Amazon never reports.</p>
+    <button type="submit" class="btn-primary">Set cost rates &rarr;</button>
+  </div>
+</form>
+{% endblock %}

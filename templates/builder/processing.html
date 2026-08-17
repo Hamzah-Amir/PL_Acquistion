@@ -1,0 +1,42 @@
+{% extends "builder/base.html" %}
+{% load static %}
+{% block title %}Reading files — Acquisition P&amp;L{% endblock %}
+
+{% block content %}
+<div class="progress-shell" id="progress" data-url="{% url 'builder:progress' job.id %}">
+  <svg class="progress-ring" width="140" height="140" viewBox="0 0 140 140" aria-hidden="true">
+    <circle class="track" cx="70" cy="70" r="54"></circle>
+    <circle class="bar" id="ring-bar" cx="70" cy="70" r="54"></circle>
+  </svg>
+
+  <div class="progress-pct" id="progress-pct">{{ job.progress }}%</div>
+  <h1 style="margin:.4rem 0 .5rem">Reading the exports</h1>
+  <p class="progress-msg" id="progress-msg">
+    {{ job.progress_message|default:"Unpacking archives…" }}
+  </p>
+
+  <ul class="progress-stages">
+    <li data-at="0"><span class="stage-dot"></span>Unpacking nested archives</li>
+    <li data-at="5"><span class="stage-dot"></span>Identifying each file by its contents</li>
+    <li data-at="40"><span class="stage-dot"></span>Reading the monthly Summary PDFs</li>
+    <li data-at="55"><span class="stage-dot"></span>Reading transactions and Business Reports</li>
+    <li data-at="70"><span class="stage-dot"></span>Reading the advertising invoices</li>
+    <li data-at="98"><span class="stage-dot"></span>Reconciling every month</li>
+  </ul>
+
+  <p class="muted" style="margin-top:1.6rem;font-size:.84rem">
+    A full 13-month set is roughly 150 files and takes about a minute.
+    You can leave this page open.
+  </p>
+
+  <div class="callout callout-bad" id="progress-error" hidden style="text-align:left;margin-top:1.6rem">
+    <strong>That didn't work</strong>
+    <span class="detail">{{ job.error }}</span>
+    <p style="margin:.7rem 0 0">
+      <a class="btn btn-secondary" href="{% url 'builder:upload' %}">Start again</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/progress.js' %}"></script>{% endblock %}

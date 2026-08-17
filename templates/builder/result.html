@@ -1,0 +1,208 @@
+{% extends "builder/base.html" %}
+{% load static %}
+{% block title %}Workbook ready — Acquisition P&amp;L{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div class="eyebrow">Step 5 of 5</div>
+  <h1>
+    {% if passed %}Reconciled and ready{% else %}Built — with checks to review{% endif %}
+  </h1>
+  <p>
+    {{ months|length }} months, {{ period }}. VAT scheme: {{ scheme_label }}.
+    {% if passed %}Every blocking reconciliation passes.{% endif %}
+  </p>
+</div>
+
+{% if build_error %}
+<div class="callout callout-bad">
+  <strong>The workbook could not be written</strong>{{ build_error }}
+</div>
+{% endif %}
+
+{% if blocking_failures %}
+<div class="callout callout-bad">
+  <strong>{{ blocking_failures|length }} blocking check failed</strong>
+  Net Sales or Total Fees do not tie to Amazon's own totals. Treat the figures below as
+  unreliable until this is resolved.
+</div>
+{% endif %}
+
+<div class="grid grid-4">
+  <div class="stat stat-hero">
+    <div class="stat-label">Net profit (TTM)</div>
+    <div class="stat-value">£{{ ttm.profit|floatformat:0 }}</div>
+    <div class="stat-note">{{ ttm.margin|floatformat:3 }} margin</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Net sales</div>
+    <div class="stat-value">£{{ ttm.net_sales|floatformat:0 }}</div>
+    <div class="stat-note">{{ ttm.units }} units</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Amazon fees</div>
+    <div class="stat-value neg">£{{ ttm.fees|floatformat:0 }}</div>
+    <div class="stat-note">{{ ttm.fee_rate|floatformat:3 }} of net sales</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Advertising</div>
+    <div class="stat-value neg">£{{ ttm.ppc|floatformat:0 }}</div>
+    <div class="stat-note">TACoS {{ ttm.tacos|floatformat:3 }}</div>
+  </div>
+</div>
+
+<div class="sticky-actions" style="margin-top:1.2rem">
+  <div>
+    <strong>{{ job.output_name }}</strong>
+    <p class="hint" style="margin:.15rem 0 0">
+      12 tabs — filled template plus the Status, SKU, COGS, PPC, Fee and Traffic analyses.
+    </p>
+  </div>
+  <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+    <a class="btn btn-secondary" href="{% url 'builder:assumptions' job.id %}">Change assumptions</a>
+    {% if job.has_output %}
+      <a class="btn btn-primary" href="{% url 'builder:download' job.id %}">⤓ Download workbook</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="split" style="margin-top:1.4rem">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Monthly performance</h2>
+        <p class="card-sub">Bars are net profit, the line is net sales. Hover any month
+           for the full breakdown. Faded bars sit outside the TTM window.</p>
+      </div>
+    </div>
+    <div id="chart"></div>
+    <div class="chart-legend">
+      <span><i style="background:var(--ok)"></i>Profit</span>
+      <span><i style="background:var(--bad)"></i>Loss</span>
+      <span><i style="background:var(--brand-2)"></i>Net sales</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Where the money goes</h2>
+    <p class="card-sub">TTM, as a share of net sales.</p>
+    <ul class="barlist">
+      {% for item in breakdown %}
+      <li>
+        <div class="row">
+          <span>{{ item.label }}</span>
+          <span class="amount">£{{ item.value|floatformat:0 }}</span>
+        </div>
+        <div class="track">
+          <div class="fill" style="width:{% widthratio item.value ttm.net_sales 100 %}%"></div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Reconciliation — workflow §4</h2></div>
+  <ul class="checklist">
+    {% for check in checks %}
+    <li class="{% if check.passed %}check-pass{% elif check.severity == 'warning' %}check-warn{% else %}check-fail{% endif %}">
+      <span class="mark" aria-hidden="true">
+        {% if check.passed %}&check;{% elif check.severity == 'warning' %}!{% else %}&times;{% endif %}
+      </span>
+      <span>
+        <strong>{{ check.name }}</strong>
+        <span class="detail">{{ check.detail }}</span>
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2>Month by month</h2>
+      <p class="card-sub">Costs negative. The two check columns must be zero in every row.</p>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Month</th><th class="num">Net sales</th><th class="num">Sales tax</th>
+          <th class="num">Fees</th><th class="num">PPC</th><th class="num">COGS</th>
+          <th class="num">VAT</th><th class="num">Profit</th><th class="num">Units</th>
+          <th class="num">Inc ✓</th><th class="num">Exp ✓</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for month in months %}
+        <tr>
+          <td><strong>{{ month.label }}</strong></td>
+          <td class="num">{{ month.net_sales|floatformat:2 }}</td>
+          <td class="num">{{ month.sales_tax|floatformat:2 }}</td>
+          <td class="num neg">{{ month.total_fees|floatformat:2 }}</td>
+          <td class="num neg">{{ month.total_ppc|floatformat:2 }}</td>
+          <td class="num neg">{{ month.cogs|floatformat:2 }}</td>
+          <td class="num">{{ month.output_vat|floatformat:2 }}</td>
+          <td class="num {% if month.net_profit < 0 %}neg{% else %}pos{% endif %}">
+            <strong>{{ month.net_profit|floatformat:2 }}</strong></td>
+          <td class="num">{{ month.units }}</td>
+          <td class="num">{{ month.income_difference|floatformat:2 }}</td>
+          <td class="num">{{ month.expenses_difference|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>TTM</td>
+          <td class="num">{{ ttm.net_sales|floatformat:2 }}</td>
+          <td class="num"></td>
+          <td class="num">{{ ttm.fees|floatformat:2 }}</td>
+          <td class="num">{{ ttm.ppc|floatformat:2 }}</td>
+          <td class="num">{{ ttm.cogs|floatformat:2 }}</td>
+          <td class="num">{{ ttm.output_vat|floatformat:2 }}</td>
+          <td class="num">{{ ttm.profit|floatformat:2 }}</td>
+          <td class="num">{{ ttm.units }}</td>
+          <td class="num">0.00</td><td class="num">0.00</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<div class="grid grid-3">
+  <div class="stat">
+    <div class="stat-label">Blended landed cost</div>
+    <div class="stat-value" style="font-size:1.2rem">£{{ ttm.landed|floatformat:2 }}</div>
+    <div class="stat-note">per unit, TTM</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Input VAT</div>
+    <div class="stat-value" style="font-size:1.2rem">£{{ ttm.input_vat|floatformat:0 }}</div>
+    <div class="stat-note">
+      {% if model.input_vat_is_reclaimable %}reclaimable{% else %}irrecoverable — a cost{% endif %}
+    </div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Implied multiple</div>
+    <div class="stat-value" style="font-size:1.2rem">
+      {% if ttm.multiple %}{{ ttm.multiple|floatformat:2 }}×{% else %}—{% endif %}
+    </div>
+    <div class="stat-note">
+      {% if asking_price %}on £{{ asking_price|floatformat:0 }}
+      {% else %}no asking price supplied{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="actions">
+  <p class="hint">Finished with this seller? Discarding deletes the uploaded files.</p>
+  <a class="btn btn-secondary" href="{% url 'builder:upload' %}">Start another job</a>
+</div>
+
+<script type="application/json" id="chart-data">{{ chart_json|safe }}</script>
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/result.js' %}"></script>{% endblock %}

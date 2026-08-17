@@ -1,0 +1,60 @@
+{% load static %}<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Amazon UK Acquisition P&amp;L{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <a class="brand" href="{% url 'builder:upload' %}">
+    <span class="brand-mark" aria-hidden="true">£</span>
+    <span>
+      <strong>Acquisition P&amp;L</strong>
+      <small>Amazon UK · 13-month reconciled model</small>
+    </span>
+  </a>
+  <div class="topbar-actions">
+    <button type="button" class="ghost" id="theme-toggle" aria-label="Toggle dark mode">
+      <span class="theme-icon" aria-hidden="true"></span><span class="theme-label">Dark</span>
+    </button>
+    {% if job %}
+      <form method="post" action="{% url 'builder:discard' job.id %}"
+            onsubmit="return confirm('Discard this job and delete its uploaded files?')">
+        {% csrf_token %}
+        <button type="submit" class="ghost danger">Discard job</button>
+      </form>
+    {% endif %}
+  </div>
+</header>
+
+{% if steps %}{% include "builder/_stepper.html" %}{% endif %}
+
+<main id="main" class="shell">
+  {% if messages %}
+    <div class="messages">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }}" role="alert">
+          <span>{{ message }}</span>
+          <button type="button" class="alert-close" aria-label="Dismiss">&times;</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <span>Every figure comes from your uploaded exports. COGS is the one input you supply.</span>
+  <span>Net Sales must tie to Amazon's Income total in every month — the golden rule.</span>
+</footer>
+
+<script src="{% static 'js/app.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

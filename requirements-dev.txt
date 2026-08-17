@@ -1,0 +1,5 @@
+-r requirements.txt
+
+# Recalculates a built workbook with a real formula engine, so the workflow §4
+# check rows can be asserted to be zero rather than merely written as formulas.
+formulas>=1.3

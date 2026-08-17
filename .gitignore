@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.py[cod]
+
+db.sqlite3
+# Uploaded seller data and generated workbooks — never commit these.
+media/
+staticfiles/
+output/
+
+.env
+.DS_Store

@@ -1,0 +1,108 @@
+{% extends "builder/base.html" %}
+{% load static %}
+{% block title %}Upload seller exports — Acquisition P&amp;L{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div class="eyebrow">Step 1 of 5</div>
+  <h1>Upload the seller's Amazon exports</h1>
+  <p>Drop in the zips exactly as they came out of Seller Central — nested archives are
+     unpacked for you, and each file is identified by its contents, not its name.</p>
+</div>
+
+<form method="post" enctype="multipart/form-data" id="upload-form">
+  {% csrf_token %}
+
+  <div class="card">
+    <div class="dropzone" id="dropzone" tabindex="0" role="button"
+         aria-label="Choose files or drag them here" data-limit-mb="{{ max_mb }}">
+      <div class="dropzone-icon" aria-hidden="true">📥</div>
+      <h3>Drag files here, or click to browse</h3>
+      <p>.zip · .pdf · .csv · .xlsx — up to {{ max_mb }} MB in total</p>
+      <input type="file" name="sources" id="sources" multiple
+             accept=".zip,.pdf,.csv,.xlsx,.xlsm">
+    </div>
+    <div class="chips" id="upload-summary" style="margin-top:.8rem"></div>
+    <ul class="filelist" id="filelist"></ul>
+  </div>
+
+  <div class="sticky-actions">
+    <p class="hint">Nothing is uploaded until you press build. Files are deleted with the job.</p>
+    <button type="submit" class="btn-primary" id="upload-submit" disabled>
+      Read the files &rarr;
+    </button>
+  </div>
+</form>
+
+<div class="grid grid-2" style="margin-top:1.6rem">
+  <div class="card">
+    <h2>What to upload</h2>
+    <p class="card-sub">One set covering the trailing 13 months.</p>
+    <table>
+      <tbody>
+        <tr>
+          <td><span class="chip chip-brand">Required</span></td>
+          <td><strong>13 monthly Summary PDFs</strong><br>
+              <span class="muted">Payments ▸ Reports Repository ▸ Date Range Reports ▸ Summary</span></td>
+        </tr>
+        <tr>
+          <td><span class="chip">Strongly advised</span></td>
+          <td><strong>13 monthly Transaction CSVs</strong><br>
+              <span class="muted">Same menu, flat-file <em>Transaction</em> — gives units per SKU</span></td>
+        </tr>
+        <tr>
+          <td><span class="chip">Optional</span></td>
+          <td><strong>13 Business Reports</strong><br>
+              <span class="muted">Detail Page Sales &amp; Traffic by Child Item</span></td>
+        </tr>
+        <tr>
+          <td><span class="chip">Optional</span></td>
+          <td><strong>PPC invoices</strong> · <strong>evaluation / SellerBoard sheet</strong><br>
+              <span class="muted">Advertising ▸ Invoices; the seller's own cost workbook</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>How the model is built</h2>
+    <p class="card-sub">The Summary PDF is the authority everything reconciles to.</p>
+    <ol style="margin:0;padding-left:1.2rem;font-size:.88rem;color:var(--ink-2)">
+      <li>Every revenue and fee line is read from the monthly Summary PDFs.</li>
+      <li>Transaction CSVs add units per SKU and cross-check each fee both ways.</li>
+      <li>Amazon fees and PPC are split ex-VAT / VAT at 20%.</li>
+      <li>You supply the landed cost — it appears in no Amazon export.</li>
+      <li>Net Sales must equal Amazon's own Income total in every month, or the
+          build tells you which month is off and by how much.</li>
+    </ol>
+    <div class="callout" style="margin:1rem 0 0">
+      <strong>Uploads are private to this job</strong>
+      They stay on this machine and are deleted when you discard the job or when
+      <code>purge_jobs</code> runs.
+    </div>
+  </div>
+</div>
+
+{% if recent %}
+<div class="card">
+  <div class="card-head"><h2>Recent jobs</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Started</th><th>Months</th><th>Step</th><th></th></tr></thead>
+      <tbody>
+        {% for item in recent %}
+        <tr>
+          <td>{{ item.created_at|date:"j M Y, H:i" }}</td>
+          <td class="num">{{ item.parse.month_keys|length }}</td>
+          <td><span class="chip">{{ item.get_step_display }}</span></td>
+          <td><a href="{% url 'builder:review' item.id %}">Resume &rarr;</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/upload.js' %}"></script>{% endblock %}
