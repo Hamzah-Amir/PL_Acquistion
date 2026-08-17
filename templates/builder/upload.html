@@ -16,7 +16,9 @@
   <div class="card">
     <div class="dropzone" id="dropzone" tabindex="0" role="button"
          aria-label="Choose files or drag them here" data-limit-mb="{{ max_mb }}">
-      <div class="dropzone-icon" aria-hidden="true">📥</div>
+      <div class="dropzone-icon" aria-hidden="true">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#icon-upload"/></svg>
+      </div>
       <h3>Drag files here, or click to browse</h3>
       <p>.zip · .pdf · .csv · .xlsx — up to {{ max_mb }} MB in total</p>
       <input type="file" name="sources" id="sources" multiple
@@ -29,7 +31,8 @@
   <div class="sticky-actions">
     <p class="hint">Nothing is uploaded until you press build. Files are deleted with the job.</p>
     <button type="submit" class="btn-primary" id="upload-submit" disabled>
-      Read the files &rarr;
+      <span>Read the files</span>
+      <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"/></svg>
     </button>
   </div>
 </form>
@@ -76,7 +79,10 @@
           build tells you which month is off and by how much.</li>
     </ol>
     <div class="callout" style="margin:1rem 0 0">
-      <strong>Uploads are private to this job</strong>
+      <strong>
+        <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
+        Uploads are private to this job
+      </strong>
       They stay on this machine and are deleted when you discard the job or when
       <code>purge_jobs</code> runs.
     </div>

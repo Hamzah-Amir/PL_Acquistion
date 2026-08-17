@@ -4,7 +4,9 @@
       <li class="step step-{{ step.state }}">
         {% if step.url %}<a href="{{ step.url }}">{% else %}<span>{% endif %}
           <span class="step-dot" aria-hidden="true">
-            {% if step.state == 'done' %}&check;{% else %}{{ step.number }}{% endif %}
+            {% if step.state == 'done' %}
+              <svg class="icon" viewBox="0 0 24 24"><use href="#icon-check"/></svg>
+            {% else %}{{ step.number }}{% endif %}
           </span>
           <span class="step-label">{{ step.label }}</span>
           {% if step.state == 'current' %}<span class="sr-only">(current step)</span>{% endif %}

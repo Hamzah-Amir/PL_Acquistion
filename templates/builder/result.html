@@ -61,7 +61,10 @@
   <div style="display:flex;gap:.6rem;flex-wrap:wrap">
     <a class="btn btn-secondary" href="{% url 'builder:assumptions' job.id %}">Change assumptions</a>
     {% if job.has_output %}
-      <a class="btn btn-primary" href="{% url 'builder:download' job.id %}">⤓ Download workbook</a>
+      <a class="btn btn-primary" href="{% url 'builder:download' job.id %}">
+        <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-download"/></svg>
+        <span>Download workbook</span>
+      </a>
     {% endif %}
   </div>
 </div>
@@ -108,7 +111,7 @@
     {% for check in checks %}
     <li class="{% if check.passed %}check-pass{% elif check.severity == 'warning' %}check-warn{% else %}check-fail{% endif %}">
       <span class="mark" aria-hidden="true">
-        {% if check.passed %}&check;{% elif check.severity == 'warning' %}!{% else %}&times;{% endif %}
+        <svg class="icon" viewBox="0 0 24 24"><use href="#icon-{% if check.passed %}check{% elif check.severity == 'warning' %}warn{% else %}cross{% endif %}"/></svg>
       </span>
       <span>
         <strong>{{ check.name }}</strong>
@@ -133,7 +136,8 @@
           <th>Month</th><th class="num">Net sales</th><th class="num">Sales tax</th>
           <th class="num">Fees</th><th class="num">PPC</th><th class="num">COGS</th>
           <th class="num">VAT</th><th class="num">Profit</th><th class="num">Units</th>
-          <th class="num">Inc ✓</th><th class="num">Exp ✓</th>
+          <th class="num" title="Net Sales less Amazon's Income total">Inc check</th>
+          <th class="num" title="Fees + PPC less Amazon's Expenses total">Exp check</th>
         </tr>
       </thead>
       <tbody>

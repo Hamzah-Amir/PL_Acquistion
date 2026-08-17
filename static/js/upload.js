@@ -21,11 +21,16 @@
 
   function kind(name) {
     var lower = name.toLowerCase();
-    if (lower.endsWith(".zip")) return ["📦", "Archive"];
-    if (lower.endsWith(".pdf")) return ["📄", "PDF"];
-    if (lower.endsWith(".csv")) return ["📊", "CSV"];
-    if (lower.endsWith(".xlsx") || lower.endsWith(".xlsm")) return ["📗", "Workbook"];
-    return ["📎", "Other"];
+    if (lower.endsWith(".zip")) return ["icon-archive", "Archive"];
+    if (lower.endsWith(".pdf")) return ["icon-pdf", "PDF"];
+    if (lower.endsWith(".csv")) return ["icon-csv", "CSV"];
+    if (lower.endsWith(".xlsx") || lower.endsWith(".xlsm")) return ["icon-sheet", "Workbook"];
+    return ["icon-file", "Other"];
+  }
+
+  function iconMarkup(id) {
+    return '<svg class="icon" aria-hidden="true" viewBox="0 0 24 24">' +
+      '<use href="#' + id + '"/></svg>';
   }
 
   function render() {
@@ -36,7 +41,7 @@
       var meta = kind(file.name);
       var li = document.createElement("li");
       li.innerHTML =
-        '<span aria-hidden="true">' + meta[0] + "</span>" +
+        iconMarkup(meta[0]) +
         '<span class="fname" title="' + file.name.replace(/"/g, "&quot;") + '">' +
         file.name + "</span>" +
         '<span class="chip">' + meta[1] + "</span>" +
