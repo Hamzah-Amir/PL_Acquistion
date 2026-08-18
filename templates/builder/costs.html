@@ -5,17 +5,12 @@
 {% block content %}
 <div class="page-head">
   <div class="eyebrow">Step 3 of 5</div>
-  <h1>What does each product cost you?</h1>
-  <p>Landed cost per unit — product plus freight plus duty, delivered into an Amazon
-     warehouse. This appears in no Amazon export, so it has to come from you. The
-     numbers on the right update as you type.</p>
+  <h1>Landed cost per unit</h1>
 </div>
 
 {% if has_evaluation %}
 <div class="callout">
-  <strong>Rates seeded from the seller's evaluation sheet</strong>
-  {{ cost_rows|length }} product row(s) were readable. Check them against supplier
-  invoices — a headline figure is often very different from what the COGS column implies.
+  Seeded from the seller's evaluation sheet ({{ cost_rows|length }} product rows).
 </div>
 {% endif %}
 
@@ -25,11 +20,7 @@
     <div>
       <div class="card">
         <div class="card-head">
-          <div>
-            <h2>Landed cost by product family</h2>
-            <p class="card-sub">Variants — colours, sizes, Amazon giveaway SKUs — inherit
-               their family's rate.</p>
-          </div>
+          <h2>Landed cost by product family</h2>
         </div>
 
         <div class="field" style="display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap">
@@ -80,35 +71,22 @@
       </div>
 
       <div class="card">
-        <h2>Did you pay VAT on those goods?</h2>
-        <p class="card-sub">This decides whether import VAT is added, extracted, or ignored.</p>
+        <h2>VAT on those goods</h2>
         <div class="choices cols">
           <label class="choice">
             <input type="radio" name="cogs_vat" value="included"
                    {% if vat_mode == 'included' %}checked{% endif %}>
-            <span>
-              <span class="choice-title"><strong>Yes — VAT included</strong></span>
-              <span class="choice-desc">The figure above already has VAT in it.</span>
-              <span class="choice-figure">import VAT = COGS ÷ 6</span>
-            </span>
+            <span><span class="choice-title"><strong>VAT included</strong></span></span>
           </label>
           <label class="choice">
             <input type="radio" name="cogs_vat" value="excluded"
                    {% if vat_mode == 'excluded' %}checked{% endif %}>
-            <span>
-              <span class="choice-title"><strong>Yes — VAT excluded</strong></span>
-              <span class="choice-desc">The figure is ex-VAT; 20% is added on top.</span>
-              <span class="choice-figure">import VAT = rate × 20%</span>
-            </span>
+            <span><span class="choice-title"><strong>VAT excluded</strong></span></span>
           </label>
           <label class="choice">
             <input type="radio" name="cogs_vat" value="none"
                    {% if vat_mode == 'none' %}checked{% endif %}>
-            <span>
-              <span class="choice-title"><strong>No VAT paid</strong></span>
-              <span class="choice-desc">Used exactly as entered; adds no input VAT.</span>
-              <span class="choice-figure">import VAT = £0</span>
-            </span>
+            <span><span class="choice-title"><strong>No VAT paid</strong></span></span>
           </label>
         </div>
       </div>
@@ -117,7 +95,7 @@
     <aside>
       <div class="card" style="position:sticky;top:5.5rem">
         <h2>Live preview</h2>
-        <p class="card-sub">Trailing twelve months, recomputed as you type.</p>
+        <p class="card-sub">Trailing twelve months.</p>
 
         <div class="stat stat-hero" style="margin-bottom:.7rem">
           <div class="stat-label">Estimated net profit</div>
@@ -139,15 +117,10 @@
           <div class="stat">
             <div class="stat-label">Import VAT in COGS</div>
             <div class="stat-value" style="font-size:1.15rem" id="pv-import-vat">—</div>
-            <div class="stat-note">reclaimable only on the 20% scheme</div>
           </div>
         </div>
 
         <div class="callout callout-warn" id="pv-warn" hidden style="margin:.9rem 0 0"></div>
-        <p class="muted" style="font-size:.78rem;margin:.9rem 0 0">
-          A preview only — the workbook is recomputed server-side and every month is
-          re-reconciled when you build.
-        </p>
       </div>
     </aside>
   </div>
@@ -157,9 +130,7 @@
     <summary style="cursor:pointer;font-weight:650">
       All {{ skus|length }} SKUs and their family assignment
     </summary>
-    <p class="card-sub" style="margin-top:.6rem">Change a family name to regroup a SKU.
-       Give a SKU its own family name to price it separately.</p>
-    <div class="table-wrap">
+    <div class="table-wrap" style="margin-top:.8rem">
       <table>
         <thead>
           <tr><th>SKU</th><th>Title</th><th class="num">Units</th>

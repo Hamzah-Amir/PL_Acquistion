@@ -5,15 +5,11 @@
 <div class="page-head">
   <div class="eyebrow">Step 4 of 5</div>
   <h1>VAT and the remaining assumptions</h1>
-  <p>Each card shows what that scheme actually costs on this seller's numbers, so the
-     choice is made against real figures rather than in the abstract.</p>
 </div>
 
 {% if over_threshold %}
 <div class="callout callout-warn">
-  <strong>TTM turnover is £{{ ttm_sales|floatformat:0 }} — above the £90k threshold</strong>
-  A buyer will very likely have to register for VAT, so model the 20% scheme before
-  pricing the deal even if the seller is not registered today.
+  TTM turnover is £{{ ttm_sales|floatformat:0 }} — above the £90k VAT registration threshold.
 </div>
 {% endif %}
 
@@ -22,11 +18,7 @@
 
   <div class="card">
     <h2>VAT scheme</h2>
-    <p class="card-sub">
-      Output VAT is charged on gross (VAT-inclusive) sales — dividing by 6 or 107.5 only
-      extracts the tax correctly from a gross figure. Reclaimable input VAT across the
-      TTM is £{{ input_vat|floatformat:0 }}.
-    </p>
+    <p class="card-sub">Input VAT across the TTM: £{{ input_vat|floatformat:0 }}.</p>
     <div class="choices cols">
       {% for scheme in schemes %}
       <label class="choice">
@@ -34,7 +26,7 @@
                {% if scheme.selected %}checked{% endif %}>
         <span>
           <span class="choice-title">
-            <strong>{{ scheme.key }}%</strong>
+            <strong>{{ scheme.key }}% · {{ scheme.short }}</strong>
             {% if scheme.output_vat < 0 %}
               <span class="chip chip-ok">refund</span>
             {% elif scheme.output_vat > 0 %}
@@ -43,7 +35,6 @@
               <span class="chip">none</span>
             {% endif %}
           </span>
-          <span class="choice-desc">{{ scheme.label }}</span>
           <span class="choice-figure">
             Output VAT £{{ scheme.output_vat|floatformat:0 }}<br>
             Net profit £{{ scheme.profit|floatformat:0 }}
@@ -52,11 +43,6 @@
       </label>
       {% endfor %}
     </div>
-    <p class="muted" style="font-size:.8rem;margin:.9rem 0 0">
-      On 0% and 7.5% the input VAT is irrecoverable. It already sits inside the
-      VAT-inclusive fee, PPC and COGS lines, so it is reported as a memo and is
-      deliberately not deducted twice.
-    </p>
   </div>
 
   <div class="grid grid-3">
@@ -68,8 +54,7 @@
           <input type="number" step="0.01" min="0" name="opex_monthly" id="opex_monthly"
                  value="{{ choices.opex_monthly|floatformat:'-2' }}">
         </div>
-        <p class="help">Per month. Agency retainer, software, VAs, prep, freight,
-           insurance — anything Amazon never sees. Leave at 0 for none.</p>
+        <p class="help">Per month. Leave at 0 for none.</p>
       </div>
     </div>
 
@@ -81,8 +66,7 @@
           <input type="number" step="0.01" min="0" name="asking_price" id="asking_price"
                  value="{{ choices.asking_price|floatformat:'-2' }}">
         </div>
-        <p class="help">Only used for the implied multiple on the Summary tab.
-           Leave at 0 to omit it.</p>
+        <p class="help">Leave at 0 to omit the valuation multiple.</p>
       </div>
     </div>
 
@@ -91,11 +75,7 @@
         <label for="business_name">Business name</label>
         <input type="text" name="business_name" id="business_name"
                value="{{ choices.business_name }}" maxlength="150">
-        <p class="help">
-          {% if seller.legal_name %}Read from the Summary PDFs as
-            &ldquo;{{ seller.legal_name }}&rdquo;.{% else %}Used in the file name and on
-            the Status tab.{% endif %}
-        </p>
+        <p class="help">Used in the download file name.</p>
       </div>
     </div>
   </div>

@@ -374,6 +374,11 @@ def assumptions(request, job_id):
     input_vat = -model.ttm_sum("input_vat")
 
     # Show what each scheme would cost across the TTM, so the choice is informed.
+    short_names = {
+        plmodel.SCHEME_NONE: "Not registered",
+        plmodel.SCHEME_FLAT: "Flat rate",
+        plmodel.SCHEME_STANDARD: "Standard",
+    }
     scheme_preview = []
     for key, label in plmodel.VAT_SCHEMES.items():
         preview = plmodel.build_model(job.parse, {**choices, "vat_scheme": key})
@@ -381,6 +386,7 @@ def assumptions(request, job_id):
             {
                 "key": key,
                 "label": label,
+                "short": short_names.get(key, key),
                 "output_vat": -preview.ttm_sum("output_vat"),
                 "profit": preview.ttm_sum("net_profit"),
                 "selected": choices.get("vat_scheme") == key,
