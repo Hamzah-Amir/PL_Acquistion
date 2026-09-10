@@ -33,6 +33,13 @@ ALLOWED_HOSTS = os.environ.get(
     "PLBUILDER_ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]"
 ).split(",")
 
+# Needed when the app sits behind a reverse proxy on a non-default port /
+# without HTTPS yet — Django's CSRF check compares the request's Origin
+# header against this list. Comma-separated, e.g. "http://1.2.3.4:8000".
+CSRF_TRUSTED_ORIGINS = [
+    origin for origin in os.environ.get("PLBUILDER_CSRF_TRUSTED_ORIGINS", "").split(",") if origin
+]
+
 
 # Application definition
 
@@ -54,6 +61,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'plbuilder.urls'
@@ -81,8 +89,16 @@ WSGI_APPLICATION = 'plbuilder.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        # Defaults to local SQLite for dev. In production, set
+        # PLBUILDER_DB_ENGINE=django.db.backends.postgresql plus the
+        # PLBUILDER_DB_* vars below (see /etc/gunicorn-plbuilder.env on the
+        # server).
+        'ENGINE': os.environ.get('PLBUILDER_DB_ENGINE', 'django.db.backends.sqlite3'),
+        'NAME': os.environ.get('PLBUILDER_DB_NAME', str(BASE_DIR / 'db.sqlite3')),
+        'USER': os.environ.get('PLBUILDER_DB_USER', ''),
+        'PASSWORD': os.environ.get('PLBUILDER_DB_PASSWORD', ''),
+        'HOST': os.environ.get('PLBUILDER_DB_HOST', ''),
+        'PORT': os.environ.get('PLBUILDER_DB_PORT', ''),
     }
 }
 
@@ -123,6 +139,15 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = 'media/'
