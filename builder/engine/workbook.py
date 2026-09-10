@@ -103,6 +103,7 @@ MONTHLY_HEADERS = [
     "Other txn fee refunds", "Storage & inbound", "Service fees", "Refund admin",
     "Delivery label", "Adjustments", "Cost of Advertising", "EXPENSES TOTAL",
     "Other income (residual)", "Other expenses (residual)", "Sales tax collected",
+    "Tax withheld (Amazon-remitted)",
 ]
 
 
@@ -146,6 +147,7 @@ def _fill_inputs_monthly(ws, model: PLModel):
             source.get("residual_income", 0.0),
             source.get("residual_expense", 0.0),
             month.sales_tax,
+            month.tax_withheld,
         ]
         stripe = S.ZEBRA_FILL if index % 2 else None
         S.put(ws, row, 1, month.label, font=S.BOLD, fill=stripe, align=S.LEFT)
@@ -199,7 +201,12 @@ def _fill_inputs_units(ws, model: PLModel) -> tuple[int, int]:
     grossing_up = vat_paid and not vat_included
     gross_up = "*1.2" if grossing_up else ""
 
-    family_names = sorted(model.families) or ["Family 1"]
+    # Every family actually on a SKU must get a row here, even one the user typed
+    # fresh into the "Family" box on the costs step and that never made it into
+    # the rate table — otherwise that SKU's £/unit falls back to a bare £0 with
+    # no link back to a cell the user can fix.
+    family_names = sorted(set(model.families) | {s.family for s in model.skus}) \
+        or ["Family 1"]
     family_row = {name: 4 + i for i, name in enumerate(family_names)}
 
     S.table_title(ws, 3, "COST RATE TABLE (edit)", rate_col, value_col)
@@ -819,6 +826,14 @@ def _write_status(wb, model: PLModel):
             f"{len(unpriced)} SKU(s) carry a £0 landed cost, so their COGS is "
             "understated: " + ", ".join(unpriced[:8])
         )
+    tax_withheld = model.ttm_sum("tax_withheld")
+    if tax_withheld:
+        flags.append(
+            f"Amazon withheld and remitted £{abs(tax_withheld):,.0f} of marketplace "
+            "facilitator tax on the seller's behalf across the TTM (see 'Tax withheld' "
+            "on Inputs_Monthly). It never reached the seller and is not their output "
+            "VAT, so it is excluded from every total on the P&L."
+        )
     low_buy_box = [m for m in model.months if m.has_traffic and m.buy_box < 0.95]
     if low_buy_box:
         flags.append(
@@ -1127,14 +1142,15 @@ def _write_fee_reconciliation(wb, model: PLModel):
     S.table_title(ws, row, "OTHER FEES — FULL COMPOSITION", 2, 15)
     row += 1
     S.note(ws, row,
-           "Amazon bundles the monthly seller subscription, Deal fees and Coupon fees "
-           "into one 'Service fees' line; they are split out here from the transaction "
-           "data. Deal fees mark the months a paid Deal ran. The Total column ties to "
-           "the P&L Other Fees line.", 2, 15)
+           "Amazon bundles the monthly seller subscription, Deal fees, Coupon fees and "
+           "any other service fee into one 'Service fees' line; they are split out here "
+           "from the transaction data. Deal fees mark the months a paid Deal ran. The "
+           "Total column ties to the P&L Other Fees line.", 2, 15)
     row += 1
     S.header(ws, row, ["Month", "Other txn fees", "Other txn refunds", "Subscription",
-                       "Deal fees", "Coupon fees", "Refund admin", "Delivery labels",
-                       "Adjustments", "Other", "Total Other", "P&L line", "d"],
+                       "Deal fees", "Coupon fees", "Other service", "Refund admin",
+                       "Delivery labels", "Adjustments", "Other", "Total Other",
+                       "P&L line", "d"],
              first_col=2)
     detail_first = row + 1
     for index, month in enumerate(model.months):
@@ -1144,21 +1160,21 @@ def _write_fee_reconciliation(wb, model: PLModel):
         for offset, value in enumerate([
             month.other_txn_fees, month.other_txn_fee_refunds,
             month.subscription_fees, month.deal_fees, month.coupon_fees,
-            month.refund_admin_fees, month.delivery_labels, month.adjustments,
-            month.residual_expense,
+            month.other_service_fees, month.refund_admin_fees,
+            month.delivery_labels, month.adjustments, month.residual_expense,
         ]):
             S.put(ws, line, 3 + offset, value, fill=stripe, fmt=S.MONEY,
                   align=S.RIGHT)
-        S.put(ws, line, 12, f"=SUM(C{line}:K{line})", font=S.TOTAL_FONT,
+        S.put(ws, line, 13, f"=SUM(C{line}:L{line})", font=S.TOTAL_FONT,
               fill=stripe, fmt=S.MONEY, align=S.RIGHT)
-        S.put(ws, line, 13, month.other_fees, fill=stripe, fmt=S.MONEY,
+        S.put(ws, line, 14, month.other_fees, fill=stripe, fmt=S.MONEY,
               align=S.RIGHT)
-        S.put(ws, line, 14, f"=L{line}-M{line}", fill=stripe, fmt=S.MONEY,
+        S.put(ws, line, 15, f"=M{line}-N{line}", fill=stripe, fmt=S.MONEY,
               align=S.RIGHT)
     last = detail_first + len(model.months)
     S.put(ws, last, 2, "TOTAL", font=S.TOTAL_FONT, fill=S.TOTAL_FILL,
           align=S.LEFT, border=S.TOP_RULE)
-    for col in range(3, 15):
+    for col in range(3, 16):
         letter = get_column_letter(col)
         S.put(ws, last, col, f"=SUM({letter}{detail_first}:{letter}{last - 1})",
               font=S.TOTAL_FONT, fill=S.TOTAL_FILL, fmt=S.MONEY,

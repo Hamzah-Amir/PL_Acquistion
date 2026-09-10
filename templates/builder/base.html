@@ -18,10 +18,7 @@
     <span class="brand-mark" aria-hidden="true">
       <svg class="icon" viewBox="0 0 24 24"><use href="#icon-chart"/></svg>
     </span>
-    <span>
-      <strong>Acquisition P&amp;L</strong>
-      <small>Amazon UK · 13-month reconciled model</small>
-    </span>
+    <strong>Acquisition P&amp;L</strong>
   </a>
   <div class="topbar-actions">
     <button type="button" class="ghost" id="theme-toggle" aria-label="Toggle dark mode">
@@ -43,7 +40,7 @@
 
 {% if steps %}{% include "builder/_stepper.html" %}{% endif %}
 
-<main id="main" class="shell">
+<main id="main" class="shell{% block shell_class %}{% endblock %}">
   {% if messages %}
     <div class="messages">
       {% for message in messages %}
@@ -59,8 +56,7 @@
 </main>
 
 <footer class="footer">
-  <span>Every figure comes from your uploaded exports. COGS is the one input you supply.</span>
-  <span>Net Sales must tie to Amazon's Income total in every month — the golden rule.</span>
+  <span>Every figure comes from your uploaded exports — full detail lives in the workbook.</span>
 </footer>
 
 <script src="{% static 'js/app.js' %}"></script>

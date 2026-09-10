@@ -501,7 +501,7 @@ def run_checks(model: PLModel, parse: dict) -> list[Check]:
         else:
             detail = f"Summary PDF and transaction CSV agree across {len(comparable)} months"
             passed = True
-        checks.append(Check(name, detail, passed, severity="warning" if bad else "error"))
+        checks.append(Check(name, detail, passed, severity="error" if bad else "warning"))
 
     # Other Fees components must sum to the P&L Other Fees line.
     bad = [

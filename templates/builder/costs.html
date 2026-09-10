@@ -1,148 +1,110 @@
 {% extends "builder/base.html" %}
 {% load static %}
 {% block title %}Cost rates — Acquisition P&amp;L{% endblock %}
+{% block shell_class %} shell-wide{% endblock %}
 
 {% block content %}
 <div class="page-head">
   <div class="eyebrow">Step 3 of 5</div>
   <h1>Landed cost per unit</h1>
+  <p>The one figure Amazon never reports — enter it per product family below.</p>
 </div>
 
 {% if has_evaluation %}
-<div class="callout">
-  Seeded from the seller's evaluation sheet ({{ cost_rows|length }} product rows).
-</div>
+<div class="callout">Seeded from the seller's evaluation sheet ({{ cost_rows|length }} product rows).</div>
 {% endif %}
 
 <form method="post">
   {% csrf_token %}
   <div class="split">
     <div>
-      <div class="card">
-        <div class="card-head">
-          <h2>Landed cost by product family</h2>
-        </div>
-
-        <div class="field" style="display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap">
-          <div style="flex:1;min-width:180px">
-            <label for="blanket-rate">Apply one rate to every family</label>
-            <div class="input-prefix">
-              <span>£</span>
-              <input type="number" id="blanket-rate" step="0.01" min="0" placeholder="2.50">
-            </div>
+      <div class="field" style="display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px">
+          <label for="blanket-rate">Apply one rate to every family</label>
+          <div class="input-prefix">
+            <span>£</span>
+            <input type="number" id="blanket-rate" step="0.01" min="0" placeholder="2.50">
           </div>
-          <button type="button" class="btn-secondary" id="blanket-apply">Apply to all</button>
         </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th class="num">Units</th>
-                <th class="num">Avg sale price</th>
-                <th class="num" style="width:130px">Landed £/unit</th>
-                <th class="num">TTM COGS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for family in families %}
-              <tr>
-                <td>
-                  <strong>{{ family.name }}</strong>
-                  <br><span class="muted" style="font-size:.78rem">
-                    {{ family.skus }} SKU{{ family.skus|pluralize }}</span>
-                </td>
-                <td class="num">{{ family.units }}</td>
-                <td class="num">£{{ family.asp|floatformat:2 }}</td>
-                <td class="num">
-                  <input type="number" step="0.0001" min="0"
-                         name="rate__{{ family.name }}"
-                         data-family="{{ family.name }}"
-                         value="{{ family.rate|floatformat:'-4' }}"
-                         aria-label="Landed cost for {{ family.name }}">
-                </td>
-                <td class="num" data-family-cogs="{{ family.name }}">—</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+        <button type="button" class="btn-secondary" id="blanket-apply">Apply to all</button>
       </div>
 
-      <div class="card">
-        <h2>VAT on those goods</h2>
-        <div class="choices cols">
-          <label class="choice">
-            <input type="radio" name="cogs_vat" value="included"
-                   {% if vat_mode == 'included' %}checked{% endif %}>
-            <span><span class="choice-title"><strong>VAT included</strong></span></span>
-          </label>
-          <label class="choice">
-            <input type="radio" name="cogs_vat" value="excluded"
-                   {% if vat_mode == 'excluded' %}checked{% endif %}>
-            <span><span class="choice-title"><strong>VAT excluded</strong></span></span>
-          </label>
-          <label class="choice">
-            <input type="radio" name="cogs_vat" value="none"
-                   {% if vat_mode == 'none' %}checked{% endif %}>
-            <span><span class="choice-title"><strong>No VAT paid</strong></span></span>
-          </label>
-        </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th class="num">Units</th>
+              <th class="num" style="width:130px">Landed £/unit</th>
+              <th class="num">TTM COGS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for family in families %}
+            <tr>
+              <td>
+                <strong>{{ family.name }}</strong>
+                <br><span class="muted" style="font-size:.78rem">{{ family.skus }} SKU{{ family.skus|pluralize }}</span>
+              </td>
+              <td class="num">{{ family.units }}</td>
+              <td class="num">
+                <input type="number" step="0.0001" min="0"
+                       name="rate__{{ family.name }}"
+                       data-family="{{ family.name }}"
+                       value="{{ family.rate|floatformat:'-4' }}"
+                       aria-label="Landed cost for {{ family.name }}">
+              </td>
+              <td class="num" data-family-cogs="{{ family.name }}">—</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <p class="eyebrow" style="margin-top:1.6rem">VAT on those goods</p>
+      <div class="choices cols">
+        <label class="choice">
+          <input type="radio" name="cogs_vat" value="included"
+                 {% if vat_mode == 'included' %}checked{% endif %}>
+          <span><strong>VAT included</strong></span>
+        </label>
+        <label class="choice">
+          <input type="radio" name="cogs_vat" value="excluded"
+                 {% if vat_mode == 'excluded' %}checked{% endif %}>
+          <span><strong>VAT excluded</strong></span>
+        </label>
+        <label class="choice">
+          <input type="radio" name="cogs_vat" value="none"
+                 {% if vat_mode == 'none' %}checked{% endif %}>
+          <span><strong>No VAT paid</strong></span>
+        </label>
       </div>
     </div>
 
     <aside>
       <div class="card" style="position:sticky;top:5.5rem">
-        <h2>Live preview</h2>
-        <p class="card-sub">Trailing twelve months.</p>
-
-        <div class="stat stat-hero" style="margin-bottom:.7rem">
-          <div class="stat-label">Estimated net profit</div>
-          <div class="stat-value" id="pv-profit">—</div>
-          <div class="stat-note" id="pv-margin">—</div>
-        </div>
-
-        <div class="grid" style="gap:.6rem">
-          <div class="stat">
-            <div class="stat-label">TTM COGS</div>
-            <div class="stat-value" style="font-size:1.15rem" id="pv-cogs">—</div>
-            <div class="stat-note" id="pv-cogs-pct">—</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">Blended landed cost</div>
-            <div class="stat-value" style="font-size:1.15rem" id="pv-blended">—</div>
-            <div class="stat-note">across {{ total_units }} units</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">Import VAT in COGS</div>
-            <div class="stat-value" style="font-size:1.15rem" id="pv-import-vat">—</div>
-          </div>
-        </div>
-
+        <p class="stat-label">Estimated net profit (TTM)</p>
+        <div class="stat-value" style="font-size:2rem;color:var(--accent)" id="pv-profit">—</div>
+        <p class="stat-note" id="pv-margin">—</p>
+        <p class="stat-note" id="pv-cogs-pct" style="margin-top:.6rem"></p>
         <div class="callout callout-warn" id="pv-warn" hidden style="margin:.9rem 0 0"></div>
       </div>
     </aside>
   </div>
 
   {% if skus|length > families|length %}
-  <details class="card">
-    <summary style="cursor:pointer;font-weight:650">
-      All {{ skus|length }} SKUs and their family assignment
-    </summary>
+  <details class="card" style="margin-top:1.4rem">
+    <summary>All {{ skus|length }} SKUs and their family assignment</summary>
     <div class="table-wrap" style="margin-top:.8rem">
       <table>
         <thead>
-          <tr><th>SKU</th><th>Title</th><th class="num">Units</th>
-              <th class="num">Sales</th><th>Family</th></tr>
+          <tr><th>SKU</th><th class="num">Units</th><th>Family</th></tr>
         </thead>
         <tbody>
           {% for sku in skus %}
           <tr>
             <td class="mono">{{ sku.sku }}</td>
-            <td class="muted" style="font-size:.8rem">{{ sku.title|truncatechars:64 }}</td>
             <td class="num">{{ sku.units }}</td>
-            <td class="num">£{{ sku.sales|floatformat:2 }}</td>
             <td><input type="text" name="family__{{ sku.sku }}" value="{{ sku.family }}"
                        aria-label="Family for {{ sku.sku }}"></td>
           </tr>
