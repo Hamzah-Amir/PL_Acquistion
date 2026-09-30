@@ -189,8 +189,13 @@ def parse_transaction_csv(
         month.row_count += 1
 
         txn_type = (cell(row, "type") or "").strip()
-        sku = (cell(row, "sku") or "").strip()
-        description = cell(row, "description")
+        # Only Order and Refund rows carry a real product movement — every
+        # other type (FBA Inventory Fee, Service Fee, Adjustment, Transfer,
+        # ...) is a fee or cash line with no SKU, and must never reach the
+        # per-SKU units/sales/title buckets that drive product clubbing.
+        is_product_row = txn_type in ("Order", "Refund")
+        sku = (cell(row, "sku") or "").strip() if is_product_row else ""
+        description = cell(row, "description") if is_product_row else ""
         quantity = _to_int(cell(row, "quantity"))
         product_sales = _to_float(cell(row, "product sales"))
         product_sales_tax = _to_float(cell(row, "product sales tax"))

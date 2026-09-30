@@ -31,38 +31,78 @@ def month_label(month_key: str) -> str:
     return f"{MONTH_ABBR[int(month) - 1]}-{year[2:]}"
 
 
-def _merge_families_by_title(
-    mapping: dict[str, str], titles: dict[str, str], units: dict[str, int]
+_TITLE_SPLIT_RE = re.compile(r"[,|(]| - ")
+# Small enough to be safe: dropping these never turns two different products
+# into the same word set, it only strips connective words that Amazon's
+# listing copy reorders freely ("... for Bath or Kitchen" / "... for Kitchen
+# or Bath").
+_TITLE_STOPWORDS = frozenset({
+    "for", "with", "and", "the", "an", "of", "to", "in", "by", "on", "at",
+    "from", "or", "a",
+})
+
+
+def _family_head(title: str) -> str:
+    """The product-name portion of a listing title — the text before the
+    first comma, pipe or dash, which is where Amazon variant titles put the
+    colour/size/pack detail."""
+    return _TITLE_SPLIT_RE.split(title.strip(), maxsplit=1)[0].strip() or title.strip()
+
+
+def _family_display_name(title: str) -> str:
+    """A short, human family name from a listing title."""
+    head = _family_head(title)
+    if len(head) > 60:
+        head = head[: head.rfind(" ", 0, 60)] if " " in head[:60] else head[:60]
+    if head and head[0].islower():
+        head = head[0].upper() + head[1:]
+    return head or "Other"
+
+
+def _family_words(title: str) -> frozenset[str]:
+    """Significant words from a title's product-name head, order- and
+    duplicate-insensitive — so two titles that name the same product but list
+    a word or two in a different order still key identically, without risking
+    a false match between two actually-different products (an exact set
+    match is still required, just not an exact *string* match)."""
+    return frozenset(
+        w for w in re.findall(r"[a-z0-9]+", _family_head(title).lower())
+        if len(w) > 2 and w not in _TITLE_STOPWORDS
+    )
+
+
+def _propose_families(
+    skus: list[tuple[str, int]], titles: dict[str, str]
 ) -> dict[str, str]:
-    """Fold together families that are selling the same product.
-
-    Amazon's giveaway SKUs are named after the promotion rather than the
-    product (``amzn.gr.Amazon.Found.B09QT67W6-...``), so name-based grouping
-    misses them — but their listing title still matches the parent product.
+    """Propose a product family per SKU, primarily from the product's own
+    listing title rather than its SKU code — a SKU code is an internal label
+    that tells you nothing about what the product is, while the title is what
+    a buyer recognises as "the same product". Falls back to the SKU-code
+    heuristic in :func:`_families_from_skus` only for SKUs with no usable
+    title on record (never seen on an Order row with a description).
     """
-    def key(title: str) -> str:
-        return re.sub(r"[^a-z0-9]", "", (title or "").lower())[:40]
+    units = dict(skus)
+    groups: dict[frozenset[str], list[str]] = defaultdict(list)
+    untitled: list[tuple[str, int]] = []
+    for sku, sku_units in skus:
+        title = titles.get(sku, "")
+        words = _family_words(title) if title else frozenset()
+        if len(words) >= 3:  # too few words to be a confident product name
+            groups[words].append(sku)
+        else:
+            untitled.append((sku, sku_units))
 
-    # The heaviest-selling family for each title becomes the survivor.
-    winner: dict[str, str] = {}
-    weight: dict[str, int] = {}
-    for sku, family in mapping.items():
-        title_key = key(titles.get(sku, ""))
-        if len(title_key) < 20:  # too short to be a confident match
-            continue
-        size = units.get(sku, 0)
-        family_weight = weight.get(family, 0) + size
-        weight[family] = family_weight
-        if title_key not in winner or family_weight > weight.get(winner[title_key], 0):
-            winner[title_key] = family
+    mapping: dict[str, str] = {}
+    for members in groups.values():
+        # The best-selling SKU's title supplies the family's display name.
+        best = max(members, key=lambda s: units.get(s, 0))
+        display = _family_display_name(titles[best])
+        for sku in members:
+            mapping[sku] = display
 
-    merged = dict(mapping)
-    for sku, family in mapping.items():
-        title_key = key(titles.get(sku, ""))
-        target = winner.get(title_key)
-        if target and target != family:
-            merged[sku] = target
-    return merged
+    if untitled:
+        mapping.update(_families_from_skus(untitled))
+    return mapping
 
 
 def _families_from_skus(skus: list[tuple[str, int]]) -> dict[str, str]:
@@ -341,8 +381,9 @@ def parse_sources(extraction: ingest.Extraction, progress=None) -> dict:
     # --- SKU roll-up and proposed families -------------------------------
     all_skus = sorted(set(sku_units) | set(sku_sales))
     total_units = {sku: sum(sku_units.get(sku, {}).values()) for sku in all_skus}
-    proposed = _families_from_skus([(sku, total_units[sku]) for sku in all_skus])
-    proposed = _merge_families_by_title(proposed, sku_titles, total_units)
+    proposed = _propose_families(
+        [(sku, total_units[sku]) for sku in all_skus], sku_titles
+    )
     # SKU revenue is reported gross: product sales plus the tax collected on
     # them, which is what the buyer actually paid.
     skus = []
