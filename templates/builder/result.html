@@ -19,27 +19,11 @@
 
 {% if blocking_failures %}
 <div class="callout callout-bad">
-  <strong>{{ blocking_failures|length }} blocking check failed</strong>
-  Net Sales or Total Fees do not tie to Amazon's own totals. Treat the workbook as
-  unreliable until this is resolved.
+  <strong>Needs review before you use this workbook</strong>
+  {% for check in blocking_failures %}{{ check.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+  do not match Amazon's totals. The month-by-month detail is in the workbook.
 </div>
 {% endif %}
-
-<ul class="checklist">
-  {% for check in checks %}
-  {% if not check.passed %}
-  <li class="{% if check.severity == 'warning' %}check-warn{% else %}check-fail{% endif %}">
-    <span class="mark" aria-hidden="true">
-      <svg class="icon" viewBox="0 0 24 24"><use href="#icon-{% if check.severity == 'warning' %}warn{% else %}cross{% endif %}"/></svg>
-    </span>
-    <span>
-      <strong>{{ check.name }}</strong>
-      <span class="detail">{{ check.detail }}</span>
-    </span>
-  </li>
-  {% endif %}
-  {% endfor %}
-</ul>
 
 <div class="card" style="margin-top:1.4rem">
   <p class="stat-label">Net profit (TTM)</p>
