@@ -253,6 +253,7 @@ def parse_sources(extraction: ingest.Extraction, progress=None) -> dict:
     sku_units: dict[str, dict[str, int]] = defaultdict(dict)
     sku_sales: dict[str, dict[str, float]] = defaultdict(dict)
     sku_tax: dict[str, dict[str, float]] = defaultdict(dict)
+    sku_fees: dict[str, dict[str, dict[str, float]]] = defaultdict(dict)
     sku_titles: dict[str, str] = {}
     for f in txn_files:
         try:
@@ -294,6 +295,8 @@ def parse_sources(extraction: ingest.Extraction, progress=None) -> dict:
                 sku_sales[sku][m.month_key] = sales
             for sku, tax in m.sales_tax_by_sku.items():
                 sku_tax[sku][m.month_key] = tax
+            for sku, fees in m.fees_by_sku.items():
+                sku_fees[sku][m.month_key] = {k: round(v, 2) for k, v in fees.items()}
             for sku, title in m.titles_by_sku.items():
                 sku_titles.setdefault(sku, title)
         tick("transactions")
@@ -403,6 +406,7 @@ def parse_sources(extraction: ingest.Extraction, progress=None) -> dict:
                 "sales_by_month": gross_by_month,
                 "sales_ex_tax_by_month": net_by_month,
                 "sales_tax_by_month": tax_by_month,
+                "fees_by_month": sku_fees.get(sku, {}),
                 "total_units": total_units[sku],
                 "total_sales": round(sum(gross_by_month.values()), 2),
             }

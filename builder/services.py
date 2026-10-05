@@ -11,7 +11,7 @@ import traceback
 from django.conf import settings
 from django.db import connection
 
-from .engine import assemble, model as plmodel, workbook
+from .engine import assemble, model as plmodel, subset, workbook
 from .models import Job
 from .parsers import ingest
 
@@ -216,6 +216,20 @@ def build_model(job: Job) -> plmodel.PLModel:
         raise ValueError("This job has not finished reading its source files yet.")
     choices = default_choices(job.parse, job.choices)
     return plmodel.build_model(job.parse, choices)
+
+
+def build_subset_output(job: Job, selected: set[str]) -> tuple[str, str]:
+    """Write a workbook covering only *selected* SKUs; returns (path, download name)."""
+    if not job.parse:
+        raise ValueError("This job has not finished reading its source files yet.")
+    choices = default_choices(job.parse, job.choices)
+    model = plmodel.build_model(subset.subset_parse(job.parse, selected), choices)
+    path = workbook.build_workbook(
+        model, settings.PL_TEMPLATE_PATH, str(job.workspace / "subset_pl.xlsx")
+    )
+    name = re.sub(r"[^A-Za-z0-9]+", "_", job.choices.get("business_name") or "Amazon_UK")
+    first, last = model.months[0].label, model.months[-1].label
+    return path, f"{name.strip('_')}_PL_selected_SKUs_{first}_to_{last}.xlsx"[:200]
 
 
 def build_output(job: Job) -> str:

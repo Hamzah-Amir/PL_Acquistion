@@ -1,0 +1,43 @@
+{% extends "builder/base.html" %}
+{% block title %}Review SKUs — Acquisition P&amp;L{% endblock %}
+{% block shell_class %} shell-wide{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Choose SKUs</h1>
+  <p>Share of sales {{ period }}. Tick the SKUs you want; the workbook will be built from those SKUs only.</p>
+</div>
+
+<form method="post" action="{% url 'builder:review_skus' job.id %}">
+  {% csrf_token %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px"><span class="sr-only">Select</span></th>
+          <th>SKU</th>
+          <th>Product</th>
+          <th class="num">Sales</th>
+          <th class="num">Share</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><input type="checkbox" name="sku" value="{{ row.sku }}" aria-label="Select {{ row.sku }}"></td>
+          <td class="mono">{{ row.sku }}</td>
+          <td>{{ row.family }}</td>
+          <td class="num">£{{ row.sales|floatformat:0 }}</td>
+          <td class="num">{{ row.share|floatformat:1 }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sticky-actions">
+    <p class="hint">At least one SKU. No upper limit.</p>
+    <button type="submit" class="btn-primary">Build workbook for selected SKUs</button>
+  </div>
+</form>
+{% endblock %}

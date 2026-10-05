@@ -101,6 +101,10 @@ class TransactionMonth:
     sales_by_sku: dict[str, float] = field(default_factory=lambda: defaultdict(float))
     sales_tax_by_sku: dict[str, float] = field(default_factory=lambda: defaultdict(float))
     titles_by_sku: dict[str, str] = field(default_factory=dict)
+    # Per-SKU fees: {sku: {"referral": x, "fba": x, "other": x}} (refunds folded in)
+    fees_by_sku: dict[str, dict[str, float]] = field(
+        default_factory=lambda: defaultdict(lambda: defaultdict(float))
+    )
     order_units: int = 0
     refund_units: int = 0
     # Fee ties (workflow §4).  Order and refund lines are kept apart because the
@@ -208,6 +212,9 @@ def parse_transaction_csv(
                 month.units_by_sku[sku] += quantity
                 month.sales_by_sku[sku] += product_sales
                 month.sales_tax_by_sku[sku] += product_sales_tax
+                month.fees_by_sku[sku]["referral"] += selling_fees
+                month.fees_by_sku[sku]["fba"] += fba_fees
+                month.fees_by_sku[sku]["other"] += _to_float(cell(row, "other transaction fees"))
                 if description and sku not in month.titles_by_sku:
                     month.titles_by_sku[sku] = description
             month.csv_selling_fees += selling_fees
@@ -226,6 +233,9 @@ def parse_transaction_csv(
                 month.units_by_sku[sku] -= quantity
                 month.sales_by_sku[sku] += product_sales
                 month.sales_tax_by_sku[sku] += product_sales_tax
+                month.fees_by_sku[sku]["referral"] += selling_fees
+                month.fees_by_sku[sku]["fba"] += fba_fees
+                month.fees_by_sku[sku]["other"] += _to_float(cell(row, "other transaction fees"))
             month.csv_selling_fee_refunds += selling_fees
             month.csv_fba_fee_refunds += fba_fees
             month.csv_other_txn_fees += _to_float(cell(row, "other transaction fees"))

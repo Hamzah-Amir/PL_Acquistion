@@ -38,6 +38,7 @@
   </div>
   <div style="display:flex;gap:.6rem;flex-wrap:wrap">
     <a class="btn btn-secondary" href="{% url 'builder:assumptions' job.id %}">Change assumptions</a>
+    <a class="btn btn-secondary" href="{% url 'builder:review_skus' job.id %}">Review SKUs</a>
     {% if job.has_output %}
       <a class="btn btn-primary" href="{% url 'builder:download' job.id %}">
         <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-download"/></svg>

@@ -13,7 +13,7 @@ from django.contrib import messages
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from . import services
 from .engine import model as plmodel
@@ -503,6 +503,59 @@ def download(request, job_id):
     return FileResponse(
         open(job.output_path, "rb"), as_attachment=True,
         filename=name, content_type=content_type,
+    )
+
+
+@require_http_methods(["GET", "POST"])
+def review_skus(request, job_id):
+    job = get_object_or_404(Job, pk=job_id)
+    if redirect_response := _require_ready(job):
+        return redirect_response
+
+    if request.method == "POST":
+        selected = set(request.POST.getlist("sku"))
+        if not selected:
+            messages.error(request, "Select at least one SKU.")
+            return redirect("builder:review_skus", job_id=job.id)
+        try:
+            path, name = services.build_subset_output(job, selected)
+        except Exception as exc:
+            messages.error(request, f"The selected-SKU workbook could not be built: {exc}")
+            return redirect("builder:review_skus", job_id=job.id)
+        content_type = (
+            mimetypes.guess_type(name)[0]
+            or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        return FileResponse(
+            open(path, "rb"), as_attachment=True,
+            filename=name, content_type=content_type,
+        )
+
+    choices = services.default_choices(job.parse, job.choices)
+    window = set(choices["window"])
+    rows = []
+    for sku in job.parse["skus"]:
+        sales = round(sum(v for k, v in sku["sales_by_month"].items() if k in window), 2)
+        rows.append({
+            "sku": sku["sku"],
+            "title": (sku["title"] or "")[:90],
+            "family": choices["sku_families"].get(sku["sku"], sku["family"]),
+            "sales": sales,
+        })
+    total = sum(r["sales"] for r in rows)
+    for r in rows:
+        r["share"] = r["sales"] / total * 100 if total else 0.0
+    rows.sort(key=lambda r: r["sales"], reverse=True)
+
+    return render(
+        request,
+        "builder/skus.html",
+        {
+            "job": job,
+            "steps": _steps_context(job, Job.Step.RESULT),
+            "rows": rows,
+            "period": f"{min(window)} to {max(window)}" if window else "",
+        },
     )
 
 

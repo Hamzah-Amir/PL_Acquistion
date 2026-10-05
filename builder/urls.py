@@ -13,5 +13,6 @@ urlpatterns = [
     path("job/<uuid:job_id>/assumptions/", views.assumptions, name="assumptions"),
     path("job/<uuid:job_id>/result/", views.result, name="result"),
     path("job/<uuid:job_id>/download/", views.download, name="download"),
+    path("job/<uuid:job_id>/skus/", views.review_skus, name="review_skus"),
     path("job/<uuid:job_id>/discard/", views.discard, name="discard"),
 ]
