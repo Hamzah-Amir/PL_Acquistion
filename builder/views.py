@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import mimetypes
+from datetime import date
 
 from django.conf import settings
 from django.contrib import messages
@@ -356,9 +357,15 @@ def assumptions(request, job_id):
 
     if request.method == "POST":
         scheme = request.POST.get("vat_scheme")
+        reg_date = (request.POST.get("vat_registration_date") or "").strip()
+        try:
+            date.fromisoformat(reg_date)
+        except ValueError:
+            reg_date = ""
         choices.update(
             {
                 "vat_scheme": scheme if scheme in plmodel.VAT_SCHEMES else plmodel.SCHEME_NONE,
+                "vat_registration_date": reg_date,
                 "opex_monthly": round(_to_float(request.POST.get("opex_monthly")), 2),
                 "asking_price": round(_to_float(request.POST.get("asking_price")), 2),
                 "business_name": (request.POST.get("business_name") or "").strip()[:150],
@@ -405,6 +412,9 @@ def assumptions(request, job_id):
             "input_vat": input_vat,
             "schemes": scheme_preview,
             "seller": job.parse.get("seller", {}),
+            "registration_month": model.registration_month,
+            "vat_split_active": model.vat_split_active,
+            "first_month_key": model.months[0].key,
         },
     )
 

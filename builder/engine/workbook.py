@@ -86,8 +86,9 @@ class PL:
     LANDED = 56
     OPEX_INPUT = 57
     VAT_SCHEME = 58
-    NOTES = 59
-    LAST = 66
+    VAT_REG_DATE = 59
+    NOTES = 60
+    LAST = 67
 
 
 # ---------------------------------------------------------------------------
@@ -491,10 +492,13 @@ def _fill_pl(ws, model: PLModel, units_row: int, cogs_row: int):
                         f"+{letter(c)}{PL.OTHER_FEES}/6"
                         + cogs_term.format(c=letter(c)))
     # Output VAT is charged on GROSS sales: dividing by 6 or 107.5 only extracts
-    # the tax correctly from a VAT-inclusive figure.
+    # the tax correctly from a VAT-inclusive figure. A month before the stated
+    # registration date is hard-coded to 0 — it never picks up the scheme cell,
+    # even if that cell is edited afterwards — because it reflects a fact (not
+    # yet registered) rather than a toggleable assumption.
     across(
         PL.OUTPUT_VAT,
-        lambda i, c: (
+        lambda i, c: "=0" if not model.months[i].vat_registered else (
             f'=IF($B${PL.VAT_SCHEME}=20,'
             f'-{letter(c)}{PL.GROSS_SALES}/6-{letter(c)}{PL.INPUT_VAT},'
             f'IF($B${PL.VAT_SCHEME}=7.5,'
@@ -583,10 +587,14 @@ def _fill_pl(ws, model: PLModel, units_row: int, cogs_row: int):
     S.put(ws, PL.OPEX_INPUT, 2,
           round(float(model.settings.get("opex_monthly") or 0), 2),
           font=S.FORMULA, fill=S.YELLOW_FILL, fmt=S.MONEY, align=S.RIGHT)
-    S.put(ws, PL.VAT_SCHEME, 1, "VAT scheme — enter 0, 7.5 or 20",
+    S.put(ws, PL.VAT_SCHEME, 1, "VAT scheme from registration (enter 0, 7.5 or 20)",
           font=S.BOLD, align=S.LEFT)
     S.put(ws, PL.VAT_SCHEME, 2, float(model.scheme),
           font=S.FORMULA, fill=S.YELLOW_FILL, fmt=S.SCHEME, align=S.RIGHT)
+    S.put(ws, PL.VAT_REG_DATE, 1, "VAT registered from (blank = whole period)",
+          font=S.BOLD, align=S.LEFT)
+    S.put(ws, PL.VAT_REG_DATE, 2, model.settings.get("vat_registration_date") or "—",
+          font=S.FORMULA, fill=S.YELLOW_FILL, align=S.RIGHT)
 
     if not cogs_vat_paid:
         cogs_note = ("No VAT was paid on the goods, so the landed cost is used "
@@ -612,6 +620,14 @@ def _fill_pl(ws, model: PLModel, units_row: int, cogs_row: int):
         f"total; sales tax is reported separately on row {PL.SALES_TAX} because "
         "Amazon totals it in its own block.",
     ]
+    if model.vat_split_active:
+        unregistered = [m.label for m in model.months if not m.vat_registered]
+        notes.append(
+            f"Registered from {model.registration_month}: {', '.join(unregistered)} "
+            f"{'is' if len(unregistered) == 1 else 'are'} modelled as 0% / not "
+            f"registered on row {PL.OUTPUT_VAT}, regardless of the scheme above — "
+            "edit the registration date on the website to change this, not the cell."
+        )
     for offset, text in enumerate(notes):
         S.note(ws, PL.NOTES + offset, text, 1, avg_col)
 

@@ -236,7 +236,7 @@ button:disabled, .btn:disabled { opacity: .5; cursor: not-allowed; }
 label { font-weight: 600; font-size: .86rem; display: block; margin-bottom: .3rem; }
 .field { margin-bottom: 1rem; }
 .field .help { color: var(--ink-3); font-size: .8rem; font-weight: 400; margin: .3rem 0 0; }
-input[type="text"], input[type="number"], select {
+input[type="text"], input[type="number"], input[type="date"], select {
   font: inherit; width: 100%; padding: .55rem .7rem; color: var(--ink);
   background: var(--surface); border: 1px solid var(--line-2);
   border-radius: var(--radius-sm);

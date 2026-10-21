@@ -173,6 +173,7 @@ def default_choices(parse: dict, existing: dict | None = None) -> dict:
         "report_month_map": existing.get("report_month_map")
         or parse.get("business_report_map", {}),
         "vat_scheme": plmodel.normalise_scheme(existing),
+        "vat_registration_date": existing.get("vat_registration_date", ""),
         "opex_monthly": existing.get("opex_monthly", 0.0),
         "asking_price": existing.get("asking_price", 0.0),
         "business_name": existing.get("business_name")

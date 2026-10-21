@@ -8,6 +8,7 @@ always re-sum to the inclusive figure.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 
 VAT_DIVISOR = 1.2
 TOLERANCE = 0.005  # half a penny
@@ -30,6 +31,19 @@ def normalise_scheme(settings: dict) -> str:
     if scheme in VAT_SCHEMES:
         return scheme
     return SCHEME_STANDARD if settings.get("vat_registered") else SCHEME_NONE
+
+
+def registration_month_key(settings: dict) -> str:
+    """The month ('YYYY-MM') VAT registration took effect, or '' if the whole
+    period should use the chosen scheme (no date given, or an unreadable one)."""
+    raw = str(settings.get("vat_registration_date") or "").strip()
+    if not raw:
+        return ""
+    try:
+        d = date.fromisoformat(raw)
+    except ValueError:
+        return ""
+    return f"{d.year:04d}-{d.month:02d}"
 
 
 def ex_vat(amount: float) -> float:
@@ -84,6 +98,10 @@ class MonthRow:
     # would double-count it.
     input_vat: float = 0.0
     output_vat: float = 0.0
+    # Whether the chosen VAT scheme actually applied in this month — false for
+    # any month before the stated VAT registration date, which is always
+    # modelled as the 0% / not-registered scheme regardless of what was picked.
+    vat_registered: bool = True
     opex: float = 0.0
 
     # Traffic (workflow §6)
@@ -248,6 +266,18 @@ class PLModel:
         return self.scheme == SCHEME_STANDARD
 
     @property
+    def registration_month(self) -> str:
+        """The month ('YYYY-MM') registration took effect, or '' if every
+        month in the sheet uses the chosen scheme."""
+        return registration_month_key(self.settings)
+
+    @property
+    def vat_split_active(self) -> bool:
+        """True when some months are modelled as registered and others not."""
+        registered = {m.vat_registered for m in self.months}
+        return len(registered) > 1
+
+    @property
     def passed(self) -> bool:
         return all(c.passed for c in self.checks if c.severity == "error")
 
@@ -283,6 +313,7 @@ def build_model(parse: dict, settings: dict) -> PLModel:
     sku_family: dict[str, str] = settings.get("sku_families") or {}
     report_map: dict[str, str] = settings.get("report_month_map") or {}
     scheme = normalise_scheme(settings)
+    registration_month = registration_month_key(settings)
     opex_monthly = float(settings.get("opex_monthly") or 0.0)
     # Was any VAT paid on the goods at all?  Zero-rated goods, or a supplier
     # outside the VAT system, mean the rate is used exactly as entered.  If VAT
@@ -421,7 +452,12 @@ def build_model(parse: dict, settings: dict) -> PLModel:
         )
         # Output VAT is charged on the VAT-INCLUSIVE sales figure: dividing by 6
         # (or by 107.5) only extracts the tax correctly from a gross amount.
-        row.output_vat = _vat_line(scheme, row.gross_sales, row.input_vat)
+        # A month before the registration date is always modelled as 0%,
+        # whatever scheme was chosen for the registered months.
+        row.vat_registered = not (registration_month and key < registration_month)
+        row.output_vat = _vat_line(
+            scheme if row.vat_registered else SCHEME_NONE, row.gross_sales, row.input_vat
+        )
         row.opex = -round(opex_monthly, 2)
 
         traffic = traffic_by_month.get(key)
@@ -595,6 +631,12 @@ def run_checks(model: PLModel, parse: dict) -> list[Check]:
 
     # VAT — sanity-check the scheme against turnover and flag repayment months.
     ttm_sales = model.ttm_sum("net_sales")
+    unregistered = [m.label for m in model.months if not m.vat_registered]
+    split_note = (
+        f" Registered from {model.registration_month}; {', '.join(unregistered)} "
+        f"{'is' if len(unregistered) == 1 else 'are'} modelled as not registered (0%)."
+        if unregistered else ""
+    )
     if model.scheme == SCHEME_NONE and ttm_sales > 90000:
         checks.append(
             Check(
@@ -628,7 +670,7 @@ def run_checks(model: PLModel, parse: dict) -> list[Check]:
                 + ("…" if len(repayments) > 4 else "")
                 + "), largely because advertising spend is heavy."
             )
-        checks.append(Check("VAT scheme", detail, True,
+        checks.append(Check("VAT scheme", detail + split_note, True,
                             severity="warning" if repayments else "error"))
     else:
         checks.append(
@@ -637,7 +679,7 @@ def run_checks(model: PLModel, parse: dict) -> list[Check]:
                 f"{VAT_SCHEMES[model.scheme]} — input VAT of "
                 f"£{-model.ttm_sum('input_vat'):,.0f} across the TTM is irrecoverable "
                 "and already sits inside the VAT-inclusive fee and PPC lines, so it "
-                "is reported but not deducted a second time.",
+                "is reported but not deducted a second time." + split_note,
                 True,
             )
         )

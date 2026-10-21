@@ -38,6 +38,22 @@
     {% endfor %}
   </div>
 
+  <div class="field" style="margin-top:1rem;max-width:280px">
+    <label for="vat_registration_date">VAT registration date</label>
+    <input type="date" name="vat_registration_date" id="vat_registration_date"
+           value="{{ choices.vat_registration_date }}">
+    <p class="help">
+      Leave blank if registered for the whole period. If this date falls after
+      {{ first_month_key }}, every month before it is modelled as 0% / not
+      registered, whatever scheme is picked above.
+    </p>
+  </div>
+  {% if vat_split_active %}
+  <div class="callout" style="margin-top:.8rem">
+    Registered from {{ registration_month }} — earlier months are modelled as not registered.
+  </div>
+  {% endif %}
+
   <div class="grid grid-3" style="margin-top:1.8rem">
     <div class="field">
       <label for="opex_monthly">Off-Amazon operating cost</label>
