@@ -263,12 +263,18 @@ def parse_sources(extraction: ingest.Extraction, progress=None) -> dict:
             tick("transactions")
             continue
         for m in parsed_months:
+            # A seller's monthly exports are windowed on local (BST/GMT) time
+            # while rows are UTC-stamped, so a few rows at each month's edge
+            # land in the neighbouring file (see transactions.filename_month).
+            # Two files reporting the same month are therefore not duplicates
+            # of each other — confirmed by order id: zero overlap in practice —
+            # so they are summed, never one overwriting the other.
             if m.month_key in txn:
                 warnings.append(
                     f"Two transaction exports cover {month_label(m.month_key)}; "
-                    f"using {f.relative}"
+                    f"merged {f.relative} into the total"
                 )
-            txn[m.month_key] = {
+            new = {
                 "key": m.month_key,
                 "label": month_label(m.month_key),
                 "source": f.relative,
@@ -289,14 +295,34 @@ def parse_sources(extraction: ingest.Extraction, progress=None) -> dict:
                 "domestic_sales": m.domestic_sales,
                 "facilitated_sales": m.facilitated_sales,
             }
+            existing = txn.get(m.month_key)
+            if existing is None:
+                txn[m.month_key] = new
+            else:
+                merged = dict(existing)
+                merged["source"] = f"{existing['source']} + {f.relative}"
+                for field in new:
+                    if field in ("key", "label", "source"):
+                        continue
+                    merged[field] = round(existing.get(field, 0) + new[field], 2)
+                txn[m.month_key] = merged
+
             for sku, units in m.units_by_sku.items():
-                sku_units[sku][m.month_key] = units
+                sku_units[sku][m.month_key] = sku_units[sku].get(m.month_key, 0) + units
             for sku, sales in m.sales_by_sku.items():
-                sku_sales[sku][m.month_key] = sales
+                sku_sales[sku][m.month_key] = round(
+                    sku_sales[sku].get(m.month_key, 0.0) + sales, 2
+                )
             for sku, tax in m.sales_tax_by_sku.items():
-                sku_tax[sku][m.month_key] = tax
+                sku_tax[sku][m.month_key] = round(
+                    sku_tax[sku].get(m.month_key, 0.0) + tax, 2
+                )
             for sku, fees in m.fees_by_sku.items():
-                sku_fees[sku][m.month_key] = {k: round(v, 2) for k, v in fees.items()}
+                prior = sku_fees[sku].get(m.month_key, {})
+                sku_fees[sku][m.month_key] = {
+                    k: round(prior.get(k, 0.0) + fees.get(k, 0.0), 2)
+                    for k in set(prior) | set(fees)
+                }
             for sku, title in m.titles_by_sku.items():
                 sku_titles.setdefault(sku, title)
         tick("transactions")
